@@ -19,7 +19,7 @@ if sys.platform == "win32":
 
 setup(
     name="YouTube to MP3 Converter",
-    version="1.0.0",
+    version="1.0.1",
     description="YouTube 동영상을 MP3로 변환하는 프로그램",
     options={"build_exe": build_exe_options},
     executables=[
