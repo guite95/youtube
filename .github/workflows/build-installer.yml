@@ -1,0 +1,70 @@
+name: Build Installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed youtube_to_mp3.py
+        
+    - name: Install NSIS
+      uses: NSIS/setup-nsis@v1
+      with:
+        version: '3.09'
+        
+    - name: Build installer
+      run: |
+        makensis installer.nsi
+        
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: YouTube_to_MP3_Converter_Setup
+        path: YouTube_to_MP3_Converter_Setup.exe
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: YouTube_to_MP3_Converter_Setup.exe
+        body: |
+          ## YouTube to MP3 Converter v${{ github.ref_name }}
+          
+          ### 새로운 기능
+          - 파일 이름 지정 기능 추가
+          - 설치 프로그램 제공
+          
+          ### 설치 방법
+          1. `YouTube_to_MP3_Converter_Setup.exe` 파일을 다운로드하세요
+          2. 설치 프로그램을 실행하세요
+          3. 설치 완료 후 시작 메뉴에서 프로그램을 실행하세요
+          
+          ### 사용법
+          1. YouTube URL을 입력하세요
+          2. (선택사항) 파일 이름을 입력하세요
+          3. 저장 경로를 선택하세요
+          4. 다운로드 버튼을 클릭하세요
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
