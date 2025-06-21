@@ -1,9 +1,10 @@
 ; YouTube to MP3 Converter Installer
 ; NSIS 스크립트
+Unicode true ; 유니코드 지원 활성화 (한글 깨짐 방지)
 
 !define PRODUCT_NAME "YouTube to MP3 Converter"
 !define PRODUCT_VERSION "1.1.0"
-!define PRODUCT_PUBLISHER "guite95"
+!define PRODUCT_PUBLISHER "guite" ; 게시자 이름 설정
 !define PRODUCT_WEB_SITE "https://github.com/guite95/youtube"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\youtube_to_mp3.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
