@@ -12,7 +12,7 @@ setup(
         "requests"
     ],
     entry_points={
-        "console_scripts": [
+        "gui_scripts": [
             "youtube-to-mp3=youtube_to_mp3:main",
         ],
     },

@@ -29,7 +29,7 @@ if exist "dist" (
 
 REM PyInstaller로 실행 파일 빌드
 echo PyInstaller로 실행 파일 빌드 중...
-pyinstaller --onefile --windowed --name youtube_to_mp3 youtube_to_mp3.py
+pyinstaller --onefile --noconsole --name youtube_to_mp3 --icon="icon.ico" youtube_to_mp3.py
 
 if %errorlevel% neq 0 (
     echo PyInstaller 빌드 중 오류가 발생했습니다.

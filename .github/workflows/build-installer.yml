@@ -31,7 +31,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed youtube_to_mp3.py
+        pyinstaller --onefile --noconsole --icon="icon.ico" youtube_to_mp3.py
         
     - name: Install Chocolatey
       run: |
