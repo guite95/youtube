@@ -37,12 +37,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM build 폴더로 복사
-echo 빌드 결과를 build 폴더로 복사 중...
-mkdir build\exe.win-amd64-3.12
-copy dist\youtube_to_mp3.exe build\exe.win-amd64-3.12\
-copy LICENSE build\exe.win-amd64-3.12\
-
 REM NSIS가 설치되어 있는지 확인
 where makensis >nul 2>nul
 if %errorlevel% neq 0 (
@@ -51,7 +45,7 @@ if %errorlevel% neq 0 (
     echo https://nsis.sourceforge.io/Download 에서 NSIS를 다운로드하여 설치해주세요.
     echo 또는 Chocolatey를 사용하여 설치할 수 있습니다: choco install nsis
     echo.
-    echo 실행 파일은 build\exe.win-amd64-3.12\ 폴더에 생성되었습니다.
+    echo 실행 파일은 dist\youtube_to_mp3.exe 폴더에 생성되었습니다.
     pause
     exit /b 1
 )
@@ -68,7 +62,7 @@ if %errorlevel% equ 0 (
     echo ========================================
     echo.
     echo 생성된 파일들:
-    echo - 실행 파일: build\exe.win-amd64-3.12\youtube_to_mp3.exe
+    echo - 실행 파일: dist\youtube_to_mp3.exe
     echo - 설치 프로그램: YouTube_to_MP3_Converter_Setup.exe
     echo.
     echo 이제 YouTube_to_MP3_Converter_Setup.exe를 GitHub 릴리즈에 업로드할 수 있습니다.

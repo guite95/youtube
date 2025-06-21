@@ -53,16 +53,8 @@ Section "메인 프로그램 (필수)" SEC_MAIN
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
   
-  ; 메인 실행 파일 및 필요 파일들 복사
-  File "build\exe.win-amd64-3.12\youtube_to_mp3.exe"
-  File "build\exe.win-amd64-3.12\python312.dll"
-  File "build\exe.win-amd64-3.12\frozen_application_license.txt"
-  
-  ; lib 폴더 및 share 폴더 복사
-  SetOutPath "$INSTDIR\lib"
-  File /r "build\exe.win-amd64-3.12\lib\*.*"
-  SetOutPath "$INSTDIR\share"
-  File /r "build\exe.win-amd64-3.12\share\*.*"
+  ; PyInstaller --onefile 로 빌드된 메인 실행 파일 하나만 복사합니다.
+  File "dist\youtube_to_mp3.exe"
   
   ; 시작 메뉴 바로가기 생성
   CreateDirectory "$SMPROGRAMS\YouTube to MP3 Converter"
@@ -87,10 +79,9 @@ SectionEnd
 
 ; Uninstaller Section
 Section Uninstall
-  Delete "$INSTDIR\uninst.exe"
-  Delete "$INSTDIR\frozen_application_license.txt"
-  Delete "$INSTDIR\python312.dll"
+  ; 메인 실행 파일 및 언인스톨러 삭제
   Delete "$INSTDIR\youtube_to_mp3.exe"
+  Delete "$INSTDIR\uninst.exe"
 
   ; 시작 메뉴 및 바탕화면 바로가기 삭제
   Delete "$SMPROGRAMS\YouTube to MP3 Converter\제거.lnk"
@@ -98,8 +89,6 @@ Section Uninstall
   Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
 
   RMDir "$SMPROGRAMS\YouTube to MP3 Converter"
-  RMDir /r "$INSTDIR\share"
-  RMDir /r "$INSTDIR\lib"
   RMDir "$INSTDIR"
 
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
