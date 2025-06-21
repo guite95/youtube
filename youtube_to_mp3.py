@@ -352,8 +352,12 @@ del "%~f0"
         self.status_label.setText("오류 발생!")
         QMessageBox.critical(self, "오류", f"다운로드 중 오류가 발생했습니다:\n{error_message}")
 
-if __name__ == "__main__":
+def main():
+    """메인 애플리케이션 실행 함수"""
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
