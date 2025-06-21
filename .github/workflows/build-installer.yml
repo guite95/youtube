@@ -29,10 +29,15 @@ jobs:
       run: |
         pyinstaller --onefile --windowed youtube_to_mp3.py
         
-    - name: Install NSIS
-      uses: NSIS/setup-nsis@v1
-      with:
-        version: '3.09'
+    - name: Install Chocolatey
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        
+    - name: Install NSIS via Chocolatey
+      run: |
+        choco install nsis -y
         
     - name: Build installer
       run: |
