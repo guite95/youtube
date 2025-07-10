@@ -47,6 +47,12 @@ downloads/
 *.m4a
 *.wav
 
+# Build scripts and spec files
+*.spec
+build_*.bat
+build_*.ps1
+installer.nsi
+
 # Configuration files with sensitive data
 config.ini
 .env
