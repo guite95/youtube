@@ -4,6 +4,7 @@ import yt_dlp
 import json
 import requests
 import subprocess
+import re
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLineEdit, QPushButton, QProgressBar, 
                             QLabel, QFileDialog, QMessageBox, QStyle, QMenuBar, QMenu)
@@ -16,7 +17,22 @@ import shutil
 # GitHub 저장소 정보
 REPO_OWNER = "guite95"  # GitHub 사용자 이름으로 변경
 REPO_NAME = "youtube"  # GitHub 저장소 이름으로 변경
-CURRENT_VERSION = "1.0.0"  # 현재 버전
+CURRENT_VERSION = "1.1.0"  # 현재 버전
+
+def sanitize_filename(filename):
+    """파일 이름에서 사용할 수 없는 특수문자를 제거합니다."""
+    # Windows에서 사용할 수 없는 문자들 제거
+    invalid_chars = r'[<>:"/\\|?*]'
+    filename = re.sub(invalid_chars, '', filename)
+    
+    # 앞뒤 공백 제거
+    filename = filename.strip()
+    
+    # 빈 문자열이거나 점으로만 구성된 경우 기본값 반환
+    if not filename or filename == '.' or filename == '..':
+        return None
+        
+    return filename
 
 class UpdateChecker:
     def __init__(self):
@@ -66,13 +82,20 @@ class DownloadWorker(QThread):
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
-    def __init__(self, url, save_path):
+    def __init__(self, url, save_path, filename=None):
         super().__init__()
         self.url = url
         self.save_path = save_path
+        self.filename = filename
 
     def run(self):
-        output_template = os.path.join(self.save_path, '%(title)s.%(ext)s')
+        if self.filename:
+            # 사용자가 지정한 파일 이름 사용
+            output_template = os.path.join(self.save_path, f'{self.filename}.%(ext)s')
+        else:
+            # 기본 동영상 제목 사용
+            output_template = os.path.join(self.save_path, '%(title)s.%(ext)s')
+            
         ydl_opts = {
             'format': 'bestaudio/best',
             'postprocessors': [{
@@ -134,6 +157,19 @@ class MainWindow(QMainWindow):
         self.download_btn.clicked.connect(self.start_download)
         url_layout.addWidget(self.download_btn)
         layout.addLayout(url_layout)
+
+        # 파일 이름 입력 영역
+        filename_layout = QHBoxLayout()
+        filename_label = QLabel("파일 이름:")
+        filename_label.setMinimumHeight(40)
+        filename_label.setMinimumWidth(80)
+        filename_layout.addWidget(filename_label)
+        
+        self.filename_input = QLineEdit()
+        self.filename_input.setPlaceholderText("파일 이름을 입력하세요 (선택사항, 비워두면 동영상 제목 사용)")
+        self.filename_input.setMinimumHeight(40)
+        filename_layout.addWidget(self.filename_input)
+        layout.addLayout(filename_layout)
 
         # 저장 경로 선택 영역
         path_layout = QHBoxLayout()
@@ -270,11 +306,21 @@ del "%~f0"
             QMessageBox.warning(self, "경고", "YouTube URL을 입력해주세요.")
             return
 
+        # 파일 이름 가져오기 (빈 문자열이면 None으로 설정)
+        filename = self.filename_input.text().strip()
+        if filename:
+            filename = sanitize_filename(filename)
+            if not filename:
+                QMessageBox.warning(self, "경고", "유효하지 않은 파일 이름입니다. 특수문자를 제거해주세요.")
+                return
+        else:
+            filename = None
+
         self.download_btn.setEnabled(False)
         self.progress_bar.setValue(0)
         self.status_label.setText("다운로드 준비 중...")
 
-        self.worker = DownloadWorker(url, self.save_path)
+        self.worker = DownloadWorker(url, self.save_path, filename)
         self.worker.progress.connect(self.update_progress)
         self.worker.finished.connect(self.download_finished)
         self.worker.error.connect(self.download_error)
@@ -292,16 +338,26 @@ del "%~f0"
     def download_finished(self):
         self.download_btn.setEnabled(True)
         self.progress_bar.setValue(100)
-        self.status_label.setText("다운로드 완료!")
-        QMessageBox.information(self, "완료", "오디오가 성공적으로 저장되었습니다.")
+        
+        # 사용자가 지정한 파일 이름이 있으면 표시
+        if hasattr(self.worker, 'filename') and self.worker.filename:
+            self.status_label.setText(f"다운로드 완료! 파일명: {self.worker.filename}.mp3")
+            QMessageBox.information(self, "완료", f"오디오가 성공적으로 저장되었습니다.\n파일명: {self.worker.filename}.mp3")
+        else:
+            self.status_label.setText("다운로드 완료!")
+            QMessageBox.information(self, "완료", "오디오가 성공적으로 저장되었습니다.")
 
     def download_error(self, error_message):
         self.download_btn.setEnabled(True)
         self.status_label.setText("오류 발생!")
         QMessageBox.critical(self, "오류", f"다운로드 중 오류가 발생했습니다:\n{error_message}")
 
-if __name__ == "__main__":
+def main():
+    """메인 애플리케이션 실행 함수"""
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,97 @@
+name: Build Installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --noconsole --icon="icon.ico" --hidden-import=PyQt6.sip youtube_to_mp3.py
+        
+    - name: Install Chocolatey
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        
+    - name: Install NSIS via Chocolatey
+      run: |
+        choco install nsis -y
+        
+    - name: Build installer
+      run: |
+        makensis installer.nsi
+        
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: YouTube_to_MP3_Converter_Setup
+        path: YouTube_to_MP3_Converter_Setup.exe
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: YouTube_to_MP3_Converter_Setup.exe
+        draft: false
+        prerelease: false
+        generate_release_notes: false
+        body: |
+          ## 🎵 YouTube to MP3 Converter v${{ github.ref_name }}
+          
+          ### ✨ 새로운 기능
+          - 📝 **파일 이름 지정 기능**: 원하는 파일 이름으로 저장 가능
+          - 🚀 **설치 프로그램**: 간편한 설치 과정
+          - 🔄 **자동 업데이트**: 프로그램 내에서 최신 버전 확인
+          
+          ### 📥 설치 방법
+          1. **`YouTube_to_MP3_Converter_Setup.exe`** 파일을 다운로드하세요
+          2. 설치 프로그램을 실행하세요
+          3. 설치 완료 후 시작 메뉴에서 프로그램을 실행하세요
+          
+          ### 📖 사용법
+          1. **YouTube URL 입력**: 변환하고 싶은 YouTube 동영상의 URL을 입력하세요
+          2. **파일 이름 지정** (선택사항): 원하는 파일 이름을 입력하세요. 비워두면 동영상 제목을 사용합니다
+          3. **저장 경로 선택**: MP3 파일을 저장할 폴더를 선택하세요
+          4. **다운로드**: 다운로드 버튼을 클릭하여 변환을 시작하세요
+          
+          ### 💻 시스템 요구사항
+          - Windows 10 이상
+          - 인터넷 연결
+          - FFmpeg (자동 설치됨)
+          
+          ### 🔗 관련 링크
+          - [📖 사용법 가이드](https://github.com/guite95/youtube#-사용법)
+          - [🐛 이슈 리포트](https://github.com/guite95/youtube/issues)
+          - [⭐ 스타 눌러주세요](https://github.com/guite95/youtube/stargazers)
+          
+          ---
+          
+          **⭐ 이 프로젝트가 도움이 되었다면 스타를 눌러주세요!**
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

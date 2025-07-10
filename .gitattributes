@@ -1,0 +1,7 @@
+# GitHub에서 파일 목록에서 숨기거나 덜 눈에 띄게 만들기
+*.py linguist-documentation
+*.bat linguist-documentation
+*.ps1 linguist-documentation
+*.nsi linguist-documentation
+requirements.txt linguist-documentation
+setup.py linguist-documentation 
