@@ -51,7 +51,6 @@ downloads/
 *.spec
 build_*.bat
 build_*.ps1
-installer.nsi
 
 # Configuration files with sensitive data
 config.ini
