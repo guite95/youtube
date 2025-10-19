@@ -32,9 +32,3 @@ temp/
 # ------------------------------------
 # GitHub Actions에서 생성된 압축 파일
 deploy.zip
-
-# AWS Elastic Beanstalk
-# ------------------------------------
-# Elastic Beanstalk 임시 파일 (로컬 테스트 환경 관련)
-.elasticbeanstalk/
-.ebextensions/*.config
