@@ -1,0 +1,40 @@
+# Python
+# ------------------------------------
+# 바이트코드 파일
+__pycache__/
+*.pyc
+
+# 가상 환경 폴더 (Virtual Environments)
+.venv/
+venv/
+env/
+
+# 의존성 설치 결과 (로컬 빌드 관련)
+pip-log.txt
+pip-delete-this-file.txt
+.python-version
+
+# IDE 및 OS 관련 파일
+# ------------------------------------
+# macOS
+.DS_Store
+
+# Visual Studio Code
+.vscode/
+
+# 임시 파일
+# ------------------------------------
+# yt-dlp로 생성된 임시 MP3 파일 및 기타
+temp/
+*.ytdl
+
+# 배포 패키지
+# ------------------------------------
+# GitHub Actions에서 생성된 압축 파일
+deploy.zip
+
+# AWS Elastic Beanstalk
+# ------------------------------------
+# Elastic Beanstalk 임시 파일 (로컬 테스트 환경 관련)
+.elasticbeanstalk/
+.ebextensions/*.config

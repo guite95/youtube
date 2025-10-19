@@ -1,0 +1,5 @@
+Flask
+yt-dlp
+# FFmpeg는 라이브러리가 아니므로, 서버에 직접 설치해야 합니다.
+# AWS Elastic Beanstalk에서는 ebextensions를 통해 설치 가능합니다.
+gunicorn # 배포 환경에서 Flask 서버를 실행할 때 사용

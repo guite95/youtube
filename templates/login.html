@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>유튜브 다운로더</h1>
+        <p>계속하려면 비밀번호를 입력하세요.</p>
+
+        <form action="{{ url_for('login') }}" method="post">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                <input style="height: 24px;" type="password" name="password" placeholder="비밀번호" required>
+                <button type="submit" style="height: 25px; display: flex; justify-content: center; align-items: center;">로그인</button>
+            </div>
+        </form>
+
+        {% if error %}
+            <div id="status" style="color: red; margin-top: 15px;">{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>

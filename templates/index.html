@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube MP3 변환기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube 영상 MP3로 변환하기</h1>
+        <p>아래에 YouTube 영상 링크를 붙여넣고 변환 버튼을 누르세요.</p>
+        
+        <form id="download-form">
+            <input type="text" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+            <button type="submit">변환 및 다운로드</button>
+        </form>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('download-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const url = document.getElementById('url').value;
+            const statusDiv = document.getElementById('status');
+            const submitButton = this.querySelector('button');
+
+            statusDiv.textContent = '서버에서 변환 중입니다. 잠시만 기다려주세요...';
+            statusDiv.style.color = '#333';
+            submitButton.disabled = true;
+            submitButton.textContent = '변환 중...';
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (response.ok) {
+                    // 서버로부터 파일 데이터를 blob 형태로 받습니다.
+                    const blob = await response.blob();
+                    
+                    // 다운로드할 파일 이름을 간단하게 만듭니다.
+                    const filename = 'audio.mp3';
+
+                    // 다운로드를 위한 임시 링크(<a> 태그)를 메모리에 생성합니다.
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob); // blob 데이터를 가리키는 임시 URL 생성
+                    link.download = filename; // 이 링크를 클릭하면 'audio.mp3'라는 이름으로 저장됩니다.
+
+                    // 링크를 페이지에 추가하고 보이지 않게 숨깁니다.
+                    document.body.appendChild(link);
+                    
+                    // 코드로 링크를 직접 클릭하여 다운로드 창을 띄웁니다.
+                    link.click();
+                    
+                    // 다운로드가 시작되었으므로, 임시 링크를 페이지에서 제거합니다.
+                    document.body.removeChild(link);
+                    
+                    statusDiv.textContent = '변환이 완료되었습니다!';
+                    statusDiv.style.color = 'green';
+
+                } else {
+                    const error = await response.json();
+                    statusDiv.textContent = `서버 오류: ${error.error}`;
+                    statusDiv.style.color = 'red';
+                }
+            } catch (error) {
+                // 네트워크 문제나 자바스크립트 실행 오류가 발생한 경우
+                console.error('Download failed:', error);
+                statusDiv.textContent = '오류가 발생했습니다. 브라우저 콘솔(F12)을 확인해주세요.';
+                statusDiv.style.color = 'red';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = '변환 및 다운로드';
+            }
+        });
+    </script>
+</body>
+</html>

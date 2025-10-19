@@ -1,0 +1,37 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches: [ "main" ] # 'main' 브랜치에 코드가 푸시될 때 실행
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # 이 작업은 우분투 환경에서 실행됩니다.
+    
+    steps:
+      - name: Checkout # 1. GitHub 리포지토리의 코드를 가져옵니다.
+        uses: actions/checkout@v3
+
+      - name: Set up Python # 2. 파이썬 환경을 설정합니다.
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11' # AWS Elastic Beanstalk 환경과 버전을 맞추세요.
+
+      - name: Generate deployment package # 3. 배포할 파일을 zip으로 압축합니다.
+        run: zip -r deploy.zip . -x ".git/*" ".github/*"
+
+      - name: Configure AWS credentials # 4. AWS에 접근할 수 있도록 자격 증명을 설정합니다.
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ap-northeast-2 # 본인의 AWS 리전으로 변경하세요 (예: 서울은 ap-northeast-2)
+
+      - name: Deploy to Elastic Beanstalk # 5. 압축된 파일을 AWS Elastic Beanstalk에 배포합니다.
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          application_name: youtube-mp3-downloader # Elastic Beanstalk 애플리케이션 이름
+          environment_name: Youtube-mp3-downloader-env # Elastic Beanstalk 환경 이름
+          version_label: "deploy-${{ github.sha }}"
+          region: ap-northeast-2 # 본인의 AWS 리전으로 변경
+          deployment_package: deploy.zip
