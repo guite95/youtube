@@ -4,8 +4,12 @@ import urllib.parse
 from flask import (Flask, render_template, request, send_file, 
                    jsonify, session, redirect, url_for)
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 # Flask 애플리케이션을 생성합니다.
 app = Flask(__name__)
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # --- 환경 변수에서 시크릿 키와 비밀번호를 불러옵니다 ---
 # 이 값들은 서버 실행 시 터미널에서 직접 주입하거나 (로컬 테스트)
@@ -74,6 +78,7 @@ def download():
     try:
         ydl_opts = {
             'format': 'bestaudio/best',
+	    'cookiefile': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt'),
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -114,7 +119,7 @@ def download():
             return jsonify({'error': 'MP3 파일을 생성하지 못했습니다.'}), 500
 
     except Exception as e:
-        return jsonify({'error': f'변환 중 오류가 발생했습니다: {str(e)}'}), 500
+        return jsonify({'error': f'변환 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요'}), 500
 
 
 # 이 스크립트가 직접 실행될 때만 Flask 개발 서버를 실행합니다.
