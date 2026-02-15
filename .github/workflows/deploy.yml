@@ -1,9 +1,9 @@
-name: Deploy to EC2
+name: Deploy to Oracle Cloud (Fast Sync)
 
 on:
   push:
     branches:
-      - main  # main 브랜치에 푸시될 때 실행
+      - main
 
 jobs:
   deploy:
@@ -12,7 +12,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 파일 복사 (repository -> EC2)
       - name: Copy files via SCP
         uses: appleboy/scp-action@master
         with:
@@ -21,10 +20,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "."
           target: "/home/ubuntu/youtube-downloader"
-          # .git 폴더나 불필요한 파일 제외
           rm: false 
 
-      # 2. 서버에서 명령어 실행 (의존성 설치 및 재시작)
       - name: Execute remote commands via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -33,9 +30,15 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/youtube-downloader
-            # 가상환경 활성화
+            
+            # 1. 의존성만 빠르게 업데이트
             source venv/bin/activate
-            # 의존성 업데이트
             pip install -r requirements.txt
-            # Flask 앱 재시작 (변경 사항 반영)
+
+            # 2. 민감 정보 파일 동적 생성 (GitHub Secrets 주입)
+            echo "${{ secrets.COOKIES_CONTENT }}" > cookies.txt
+            echo '${{ secrets.SERVICE_CONTENT }}' | sudo tee /etc/systemd/system/youtube.service
+
+            # 3. 서비스 재시작
+            sudo systemctl daemon-reload
             sudo systemctl restart youtube

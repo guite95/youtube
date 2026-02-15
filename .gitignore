@@ -32,3 +32,6 @@ temp/
 # ------------------------------------
 # GitHub Actions에서 생성된 압축 파일
 deploy.zip
+
+cookies.txt
+youtube.service
