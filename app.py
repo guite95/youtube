@@ -1,6 +1,7 @@
 import os
 import yt_dlp
 import urllib.parse
+import logging
 from flask import (Flask, render_template, request, send_file, 
                    jsonify, session, redirect, url_for)
 
@@ -8,6 +9,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Flask 애플리케이션을 생성합니다.
 app = Flask(__name__)
+logger = logging.getLogger(__name__)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
@@ -76,9 +78,9 @@ def download():
         return jsonify({'error': 'URL이 제공되지 않았습니다.'}), 400
 
     try:
+        cookiefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
         ydl_opts = {
             'format': 'bestaudio/best',
-	    'cookiefile': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt'),
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -86,7 +88,15 @@ def download():
             }],
             'outtmpl': os.path.join(TEMP_DIR, '%(title)s.%(ext)s'),
             'restrictfilenames': True,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web', 'tv']
+                }
+            },
         }
+
+        if os.path.exists(cookiefile):
+            ydl_opts['cookiefile'] = cookiefile
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
@@ -118,7 +128,21 @@ def download():
         else:
             return jsonify({'error': 'MP3 파일을 생성하지 못했습니다.'}), 500
 
-    except Exception as e:
+    except yt_dlp.utils.DownloadError as e:
+        error_message = str(e)
+        logger.exception('yt-dlp download error: %s', error_message)
+
+        if 'n challenge solving failed' in error_message or 'Requested format is not available' in error_message:
+            return jsonify({
+                'error': (
+                    '유튜브 측 봇 방어로 인해 현재 서버에서 스트림 해석에 실패했습니다. '
+                    '서버의 yt-dlp를 최신 버전으로 업데이트하고 Node.js(또는 QuickJS) 런타임을 설치한 뒤 다시 시도해주세요.'
+                )
+            }), 503
+
+        return jsonify({'error': '영상 정보를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.'}), 502
+    except Exception:
+        logger.exception('unexpected conversion error')
         return jsonify({'error': f'변환 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요'}), 500
 
 
