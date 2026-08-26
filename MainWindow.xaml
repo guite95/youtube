@@ -1,0 +1,163 @@
+﻿<Window x:Class="ytdown.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ytdown"
+        Title="YouTube MP3 Pro" Height="680" Width="460"
+        Background="#F9FAFB" WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <local:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
+
+        <Style x:Key="ModernProgressStyle" TargetType="ProgressBar">
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#FF0000"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid SnapsToDevicePixels="true">
+                            <!-- Track -->
+                            <Border x:Name="TrackBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6"
+                                    BorderBrush="#D1D5DB" BorderThickness="0.5"/>
+
+                            <!-- Indicator -->
+                            <Border Background="{TemplateBinding Foreground}"
+                                    CornerRadius="6"
+                                    HorizontalAlignment="Left">
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource ProgressToWidthConverter}">
+                                        <!-- Value -->
+                                        <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="Value"/>
+                                        <!-- Maximum -->
+                                        <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="Maximum"/>
+                                        <!-- Track ActualWidth -->
+                                        <Binding ElementName="TrackBorder" Path="ActualWidth"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#111827"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#374151"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="OpenFolderButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#F3F4F6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="30">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,25">
+                <Path Data="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 4-8 4z" Fill="#FF0000" Stretch="Uniform" Width="30" Height="30" Margin="0,0,10,0"/>
+                <TextBlock Text="MP3 Downloader" FontSize="22" FontWeight="Bold" Foreground="#111827" VerticalAlignment="Center"/>
+            </StackPanel>
+            
+            <Border Background="White" CornerRadius="16" Height="200" Margin="0,0,0,20" BorderBrush="#E5E7EB" BorderThickness="1">
+                <Border.Effect><DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.05"/></Border.Effect>
+                <Grid>
+                    <Border CornerRadius="15">
+                        <Border.Background><ImageBrush x:Name="ThumbnailBrush" Stretch="UniformToFill"/></Border.Background>
+                    </Border>
+                    <TextBlock x:Name="Placeholder" Text="영상을 기다리고 있어요" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="#9CA3AF"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Text="유튜브 주소" FontSize="12" FontWeight="SemiBold" Foreground="#4B5563" Margin="4,0,0,5"/>
+            <TextBox x:Name="UrlTextBox" Height="40" Margin="0,0,0,15"/>
+
+            <TextBlock Text="저장 경로" FontSize="12" FontWeight="SemiBold" Foreground="#4B5563" Margin="4,0,0,5"/>
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
+                <TextBox x:Name="SavePathTextBox" Height="40" IsReadOnly="True" Background="#F3F4F6"/>
+                <Button Grid.Column="1" Content="위치 선택" Click="BrowseBtn_Click" Margin="10,0,0,0" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" Cursor="Hand">
+                    <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                </Button>
+            </Grid>
+
+            <Button x:Name="DownloadBtn" Content="고음질 MP3 추출" Height="50"
+                    Click="DownloadBtn_Click"
+                    Style="{StaticResource ModernButtonStyle}"
+                    FontSize="16" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,10"/>
+
+            <!-- 취소 버튼 추가 -->
+            <Button x:Name="CancelBtn" Content="취소" Height="40"
+                    Click="CancelBtn_Click"
+                    Style="{StaticResource OpenFolderButtonStyle}"
+                    FontSize="14" Cursor="Hand"
+                    Visibility="Collapsed" Margin="0,0,0,20"/>
+
+            <TextBlock x:Name="TitleLabel" Text="영상 제목" FontWeight="SemiBold"
+                       Foreground="#1F2937" Margin="2,0,2,8" TextTrimming="CharacterEllipsis"/>
+
+            <ProgressBar x:Name="DownloadProgress"
+                         Minimum="0" Maximum="100"
+                         Style="{StaticResource ModernProgressStyle}"/>
+
+            <Grid Margin="0,10,0,0">
+                <Button x:Name="OpenFolderBtn" Content="폴더 열기"
+                        HorizontalAlignment="Left" Width="85" Height="30"
+                        Visibility="Collapsed" Click="OpenFolderBtn_Click"
+                        Style="{StaticResource OpenFolderButtonStyle}" FontSize="12"/>
+
+                <TextBlock x:Name="StatusLabel" Text="상태: 대기 중"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Foreground="#9CA3AF" FontSize="12" Padding="0,0,0,8"/>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</Window>

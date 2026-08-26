@@ -1,0 +1,34 @@
+﻿[debug] Command-line config: ['--verbose', '-x', '--audio-format', 'mp3', '--audio-quality', '192K', '--newline', '--ffmpeg-location', 'C:\\UK\\ytdown\\bin\\Debug\\net8.0-windows', '-o', 'C:\\Users\\SAMSUNG\\Downloads\\너편돼9.%(ext)s', 'https://www.youtube.com/watch?v=iuKRuZJjbq8']
+[debug] Encodings: locale cp949, fs utf-8, pref cp949, out cp949 (No ANSI), error cp949 (No ANSI), screen cp949 (No ANSI)
+[debug] yt-dlp version stable@2026.02.04 from yt-dlp/yt-dlp [c677d866d] (win_exe)
+[debug] Python 3.10.11 (CPython AMD64 64bit) - Windows-10-10.0.26100-SP0 (OpenSSL 1.1.1t  7 Feb 2023)
+[debug] exe versions: none
+[debug] Optional libraries: Cryptodome-3.23.0, brotli-1.2.0, certifi-2026.01.04, curl_cffi-0.14.0, mutagen-1.47.0, requests-2.32.5, sqlite3-3.40.1, urllib3-2.6.3, websockets-16.0, yt_dlp_ejs-0.4.0
+[debug] JS runtimes: none
+[debug] Proxy map: {}
+[debug] Request Handlers: urllib, requests, websockets, curl_cffi
+[debug] Plugin directories: none
+[debug] Loaded 1856 extractors
+[debug] [youtube] [pot] PO Token Providers: none
+[debug] [youtube] [pot] PO Token Cache Providers: memory
+[debug] [youtube] [pot] PO Token Cache Spec Providers: webpo
+[debug] [youtube] [jsc] JS Challenge Providers: bun (unavailable), deno (unavailable), node (unavailable), quickjs (unavailable)
+WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
+[debug] [youtube] Forcing "tv" player JS variant for player 1798f86c
+        original url = /s/player/1798f86c/player_es6.vflset/en_US/base.js
+[debug] Sort order given by extractor: quality, res, fps, hdr:12, source, vcodec, channels, acodec, lang, proto
+[debug] Formats sorted by: hasvid, ie_pref, quality, res, fps, hdr:12(7), source, vcodec, channels, acodec, lang, proto, size, br, asr, vext, aext, hasaud, id
+[debug] Invoking http downloader on "https://rr6---sn-3u-u5x6.googlevideo.com/videoplayback?expire=1771334192&ei=0BWUaZi1GNGrpt8PvpPsqAo&ip=121.183.104.77&id=o-AJJCnivUXwrj_Pvd-mQa7hehgC286Lw-mbkM2Kfx-wgw&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=235&met=1771312592%2C&mh=OP&mm=31%2C29&mn=sn-3u-u5x6%2Csn-3u-bh2lr&ms=au%2Crdu&mv=m&mvi=6&pcm2cms=yes&pl=19&rms=au%2Cau&pcm2=no&initcwndbps=3365000&bui=AVNa5-wFIIlOOu8Qkww9e10M55C71-K_GbCXq1IK0DPbJgyT6d8yKieHrmHrskB9EK0ZbwOw0lj8dy3K&spc=6dlaFA-0HDo7&vprv=1&svpuc=1&mime=audio%2Fwebm&rqh=1&gir=yes&clen=3996165&dur=234.841&lmt=1711462141808594&mt=1771312164&fvip=6&keepalive=yes&fexp=51552689%2C51565115%2C51565682%2C51580968%2C51772949&c=ANDROID_VR&txp=5308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cpcm2%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AJEij0EwRgIhAPp-QWuXAxSoC93K_K9rt3wQrio_CyNS_3wYbG3VKHkdAiEA9OPLgq_vx7HEc5lQlO7cboqFt3qmW_L-eb5Akhw3zdw%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpcm2cms%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRgIhAL-Txnd9WBI18SoqGwK7BLRy0i3ALqSsGl5rlkDAKqjnAiEAnhufVYQhL9C5ab8Sp-oKeY-nLqiHeZcPJDPGJDhr8Yg%3D"
+[debug] File locking is not supported. Proceeding without locking
+ERROR: Postprocessing: ffprobe and ffmpeg not found. Please install or provide the path using --ffmpeg-location
+Traceback (most recent call last):
+  File "yt_dlp\YoutubeDL.py", line 3622, in process_info
+  File "yt_dlp\YoutubeDL.py", line 3808, in post_process
+  File "yt_dlp\YoutubeDL.py", line 3790, in run_all_pps
+  File "yt_dlp\YoutubeDL.py", line 3768, in run_pp
+  File "yt_dlp\postprocessor\common.py", line 23, in run
+  File "yt_dlp\postprocessor\common.py", line 128, in wrapper
+  File "yt_dlp\postprocessor\ffmpeg.py", line 486, in run
+  File "yt_dlp\postprocessor\ffmpeg.py", line 234, in get_audio_codec
+yt_dlp.utils.PostProcessingError: ffprobe and ffmpeg not found. Please install or provide the path using --ffmpeg-location
+
