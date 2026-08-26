@@ -1,0 +1,75 @@
+## ==========================================
+## Project Specific (ytdown / YouTube Downloader)
+## ==========================================
+# Tools & External Binaries (대용량 실행 파일 및 백업 파일)
+tools/*.exe
+tools/*.old
+tools/*.dll
+tools/*.zip
+tools/*.tar.gz
+
+# Sensitive Credentials (유튜브 로그인/인증 쿠키 - 절대 커밋 금지)
+tools/cookies.txt
+*.cookies.txt
+cookies.txt
+
+# Downloaded Media & Temp Files (다운로드된 영상/음원 및 임시 파일)
+downloads/
+output/
+*.mp4
+*.mkv
+*.webm
+*.mp3
+*.m4a
+*.wav
+*.opus
+*.flac
+*.part
+*.ytdl
+*.temp
+
+# Log files
+*.log
+
+## ==========================================
+## .NET / C# / WPF Build Outputs
+## ==========================================
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# MSBuild & NuGet
+*.user
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.assets.json
+*.nuget.props
+*.nuget.targets
+
+## ==========================================
+## Visual Studio & IDE Settings
+## ==========================================
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.userprefs
+*.launch
+*.psess
+*.vsp
+*.vspx
+
+## ==========================================
+## OS & System Files
+## ==========================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
