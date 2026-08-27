@@ -1,0 +1,146 @@
+name: Release ytdown
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, for example 2.0.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve release version
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $version = '${{ inputs.version }}'.Trim().TrimStart('v')
+            $tag = "v$version"
+          }
+          else {
+            $tag = '${{ github.ref_name }}'
+            $version = $tag.TrimStart('v')
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') {
+            throw "Invalid version: $version"
+          }
+
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Download bundled tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path tools | Out-Null
+
+          curl.exe -L --fail --retry 3 `
+            'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe' `
+            -o 'tools/yt-dlp.exe'
+
+          curl.exe -L --fail --retry 3 `
+            'https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip' `
+            -o 'deno.zip'
+          Expand-Archive -Path 'deno.zip' -DestinationPath 'deno-unpacked' -Force
+          Copy-Item -LiteralPath 'deno-unpacked/deno.exe' -Destination 'tools/deno.exe' -Force
+
+          curl.exe -L --fail --retry 3 `
+            'https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip' `
+            -o 'ffmpeg.zip'
+          Expand-Archive -Path 'ffmpeg.zip' -DestinationPath 'ffmpeg-unpacked' -Force
+
+          $ffmpeg = Get-ChildItem -Path 'ffmpeg-unpacked' -Filter 'ffmpeg.exe' -Recurse | Select-Object -First 1
+          $ffprobe = Get-ChildItem -Path 'ffmpeg-unpacked' -Filter 'ffprobe.exe' -Recurse | Select-Object -First 1
+          if (-not $ffmpeg -or -not $ffprobe) {
+            throw 'FFmpeg package did not contain ffmpeg.exe and ffprobe.exe.'
+          }
+
+          Copy-Item -LiteralPath $ffmpeg.FullName -Destination 'tools/ffmpeg.exe' -Force
+          Copy-Item -LiteralPath $ffprobe.FullName -Destination 'tools/ffprobe.exe' -Force
+
+          & 'tools/yt-dlp.exe' --version
+          & 'tools/deno.exe' --version
+          & 'tools/ffmpeg.exe' -version | Select-Object -First 1
+
+      - name: Publish Windows app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet publish ytdown.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=false `
+            -p:Version=$env:RELEASE_VERSION `
+            -o publish
+
+          @(
+            "version=$env:RELEASE_VERSION"
+            "channel=stable"
+            "arch=win-x64"
+          ) | Set-Content -LiteralPath 'publish/release.manifest' -Encoding utf8
+
+          foreach ($required in @(
+            'publish/ytdown.exe',
+            'publish/release.manifest',
+            'publish/tools/yt-dlp.exe',
+            'publish/tools/deno.exe',
+            'publish/tools/ffmpeg.exe',
+            'publish/tools/ffprobe.exe'
+          )) {
+            if (-not (Test-Path -LiteralPath $required)) {
+              throw "Missing release file: $required"
+            }
+          }
+
+      - name: Package and checksum
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = 'ytdown-win-x64.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path 'publish/*' -DestinationPath $zip -CompressionLevel Optimal
+
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          "$hash  $zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ascii
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+
+          if (gh release view $tag 2>$null) {
+            gh release upload $tag `
+              'ytdown-win-x64.zip' `
+              'ytdown-win-x64.zip.sha256' `
+              --clobber
+          }
+          else {
+            gh release create $tag `
+              'ytdown-win-x64.zip' `
+              'ytdown-win-x64.zip.sha256' `
+              --title "ytdown $tag" `
+              --generate-notes `
+              --target '${{ github.sha }}'
+          }
