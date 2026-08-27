@@ -1,10 +1,15 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace ytdown;
@@ -20,13 +25,13 @@ internal static class UpdateService
 
     public static async Task CheckForUpdatesAsync(Window owner)
     {
-        if (!TryReadInstalledVersion(AppContext.BaseDirectory, out string currentVersionText, out Version currentVersion))
+        if (!TryReadInstalledVersion(AppContext.BaseDirectory, out string currentText, out Version current))
             return;
 
         GitHubRelease? release;
         try
         {
-            using var response = await Http.GetAsync(LatestReleaseUrl, HttpCompletionOption.ResponseHeadersRead);
+            using HttpResponseMessage response = await Http.GetAsync(LatestReleaseUrl, HttpCompletionOption.ResponseHeadersRead);
             if (!response.IsSuccessStatusCode)
                 return;
 
@@ -45,20 +50,20 @@ internal static class UpdateService
         if (release == null || release.Draft || release.Prerelease)
             return;
 
-        if (!TryParseVersion(release.TagName, out Version latestVersion) || latestVersion <= currentVersion)
+        if (!TryParseVersion(release.TagName, out Version latest) || latest <= current)
             return;
 
-        GitHubAsset? packageAsset = release.Assets?.FirstOrDefault(a =>
-            string.Equals(a.Name, PackageAssetName, StringComparison.OrdinalIgnoreCase));
-        GitHubAsset? checksumAsset = release.Assets?.FirstOrDefault(a =>
-            string.Equals(a.Name, ChecksumAssetName, StringComparison.OrdinalIgnoreCase));
+        GitHubAsset? package = release.Assets?.FirstOrDefault(x =>
+            string.Equals(x.Name, PackageAssetName, StringComparison.OrdinalIgnoreCase));
+        GitHubAsset? checksum = release.Assets?.FirstOrDefault(x =>
+            string.Equals(x.Name, ChecksumAssetName, StringComparison.OrdinalIgnoreCase));
 
-        if (packageAsset == null || checksumAsset == null)
+        if (package == null || checksum == null)
             return;
 
         MessageBoxResult answer = MessageBox.Show(
             owner,
-            $"새 버전 {release.TagName}이 있습니다.\n\n현재 버전: {currentVersionText}\n새 버전: {release.TagName}\n\n지금 업데이트하면 새 버전을 자동으로 다운로드한 뒤 프로그램이 재시작됩니다.",
+            $"새 버전 {release.TagName}이 있습니다.\n\n현재 버전: {currentText}\n새 버전: {release.TagName}\n\n지금 업데이트하면 새 버전을 다운로드한 뒤 프로그램이 재시작됩니다.",
             "업데이트 확인",
             MessageBoxButton.YesNo,
             MessageBoxImage.Information);
@@ -68,7 +73,7 @@ internal static class UpdateService
 
         try
         {
-            await DownloadAndApplyAsync(release.TagName, packageAsset.BrowserDownloadUrl, checksumAsset.BrowserDownloadUrl);
+            await DownloadAndApplyAsync(release.TagName, package.BrowserDownloadUrl, checksum.BrowserDownloadUrl);
         }
         catch (Exception ex)
         {
@@ -83,18 +88,15 @@ internal static class UpdateService
 
     private static async Task DownloadAndApplyAsync(string tagName, string packageUrl, string checksumUrl)
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string updateRoot = Path.Combine(localAppData, "ytdown", "updates");
-        Directory.CreateDirectory(updateRoot);
+        string root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ytdown",
+            "updates");
+        string updateDir = Path.Combine(root, $"{Sanitize(tagName)}-{Guid.NewGuid():N}");
+        string stagingDir = Path.Combine(updateDir, "staging");
+        string zipPath = Path.Combine(updateDir, PackageAssetName);
 
-        string updateDirectory = Path.Combine(
-            updateRoot,
-            $"{SanitizeForPath(tagName)}-{Guid.NewGuid():N}");
-        string stagingDirectory = Path.Combine(updateDirectory, "staging");
-        string zipPath = Path.Combine(updateDirectory, PackageAssetName);
-
-        Directory.CreateDirectory(updateDirectory);
-        Directory.CreateDirectory(stagingDirectory);
+        Directory.CreateDirectory(stagingDir);
 
         try
         {
@@ -108,74 +110,74 @@ internal static class UpdateService
                 .ToLowerInvariant()
                 ?? throw new InvalidDataException("업데이트 체크섬 파일이 비어 있습니다.");
 
-            await using (var zipStream = File.OpenRead(zipPath))
+            string actualHash;
+            using (var sha = SHA256.Create())
+            await using (var stream = File.OpenRead(zipPath))
             {
-                byte[] hash = await SHA256.HashDataAsync(zipStream);
-                string actualHash = Convert.ToHexString(hash).ToLowerInvariant();
-                if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("업데이트 파일의 SHA-256 검증에 실패했습니다.");
+                byte[] hash = sha.ComputeHash(stream);
+                actualHash = Convert.ToHexString(hash).ToLowerInvariant();
             }
 
-            await Task.Run(() => ZipFile.ExtractToDirectory(zipPath, stagingDirectory, overwriteFiles: true));
+            if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("업데이트 파일의 SHA-256 검증에 실패했습니다.");
 
-            string stagedExe = Path.Combine(stagingDirectory, "ytdown.exe");
-            if (!File.Exists(stagedExe))
+            await Task.Run(() => ZipFile.ExtractToDirectory(zipPath, stagingDir, overwriteFiles: true));
+
+            if (!File.Exists(Path.Combine(stagingDir, "ytdown.exe")))
                 throw new InvalidDataException("업데이트 패키지에 ytdown.exe가 없습니다.");
 
-            if (!TryReadInstalledVersion(stagingDirectory, out string stagedVersionText, out Version stagedVersion) ||
-                !TryParseVersion(tagName, out Version expectedVersion) ||
-                stagedVersion != expectedVersion)
+            if (!TryReadInstalledVersion(stagingDir, out string stagedText, out Version staged) ||
+                !TryParseVersion(tagName, out Version expected) || staged != expected)
             {
-                throw new InvalidDataException(
-                    $"업데이트 패키지 버전이 일치하지 않습니다. ({stagedVersionText} / {tagName})");
+                throw new InvalidDataException($"업데이트 패키지 버전이 일치하지 않습니다. ({stagedText} / {tagName})");
             }
 
-            LaunchUpdater(stagingDirectory);
+            LaunchUpdater(stagingDir, updateDir);
         }
         catch
         {
-            TryDeleteDirectory(updateDirectory);
+            TryDeleteDirectory(updateDir);
             throw;
         }
     }
 
-    private static async Task DownloadFileAsync(string url, string destinationPath)
+    private static async Task DownloadFileAsync(string url, string destination)
     {
-        using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
         await using Stream input = await response.Content.ReadAsStreamAsync();
         await using var output = new FileStream(
-            destinationPath,
+            destination,
             FileMode.Create,
             FileAccess.Write,
             FileShare.None,
-            bufferSize: 1024 * 128,
+            128 * 1024,
             useAsync: true);
 
         await input.CopyToAsync(output);
     }
 
-    private static void LaunchUpdater(string stagingDirectory)
+    private static void LaunchUpdater(string stagingDir, string updateDir)
     {
-        string targetDirectory = Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory);
-        string? parentDirectory = Path.GetDirectoryName(targetDirectory);
-        if (string.IsNullOrWhiteSpace(parentDirectory))
+        string targetDir = Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory);
+        string? parentDir = Path.GetDirectoryName(targetDir);
+        if (string.IsNullOrWhiteSpace(parentDir))
             throw new InvalidOperationException("설치 경로를 확인할 수 없습니다.");
 
         string scriptPath = Path.Combine(Path.GetTempPath(), $"ytdown-update-{Guid.NewGuid():N}.ps1");
-        File.WriteAllText(scriptPath, UpdaterPowerShell, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        File.WriteAllText(scriptPath, UpdaterPowerShell, new UTF8Encoding(false));
 
-        bool requireElevation = !CanWriteDirectory(parentDirectory);
+        bool elevate = !CanWriteDirectory(parentDir);
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
             WorkingDirectory = Path.GetTempPath(),
-            UseShellExecute = requireElevation,
+            UseShellExecute = elevate,
             WindowStyle = ProcessWindowStyle.Hidden,
         };
 
-        if (requireElevation)
+        if (elevate)
             psi.Verb = "runas";
         else
             psi.CreateNoWindow = true;
@@ -188,43 +190,47 @@ internal static class UpdateService
         psi.ArgumentList.Add("-ParentPid");
         psi.ArgumentList.Add(Environment.ProcessId.ToString());
         psi.ArgumentList.Add("-StagingDir");
-        psi.ArgumentList.Add(stagingDirectory);
+        psi.ArgumentList.Add(stagingDir);
+        psi.ArgumentList.Add("-UpdateDir");
+        psi.ArgumentList.Add(updateDir);
         psi.ArgumentList.Add("-TargetDir");
-        psi.ArgumentList.Add(targetDirectory);
+        psi.ArgumentList.Add(targetDir);
 
-        Process.Start(psi) ?? throw new InvalidOperationException("업데이트 프로세스를 시작하지 못했습니다.");
+        Process? updater = Process.Start(psi);
+        if (updater == null)
+            throw new InvalidOperationException("업데이트 프로세스를 시작하지 못했습니다.");
+
         Application.Current.Shutdown();
     }
 
-    private static bool TryReadInstalledVersion(string directory, out string versionText, out Version version)
+    private static bool TryReadInstalledVersion(string directory, out string text, out Version version)
     {
-        versionText = string.Empty;
+        text = string.Empty;
         version = new Version(0, 0);
 
-        string manifestPath = Path.Combine(directory, ManifestFileName);
-        if (!File.Exists(manifestPath))
+        string manifest = Path.Combine(directory, ManifestFileName);
+        if (!File.Exists(manifest))
             return false;
 
-        string? versionLine = File.ReadLines(manifestPath)
-            .FirstOrDefault(line => line.StartsWith("version=", StringComparison.OrdinalIgnoreCase));
-
-        if (string.IsNullOrWhiteSpace(versionLine))
+        string? line = File.ReadLines(manifest)
+            .FirstOrDefault(x => x.StartsWith("version=", StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(line))
             return false;
 
-        versionText = versionLine[(versionLine.IndexOf('=') + 1)..].Trim();
-        return TryParseVersion(versionText, out version);
+        text = line[(line.IndexOf('=') + 1)..].Trim();
+        return TryParseVersion(text, out version);
     }
 
-    private static bool TryParseVersion(string? text, out Version version)
+    private static bool TryParseVersion(string? value, out Version version)
     {
         version = new Version(0, 0);
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        string normalized = text.Trim().TrimStart('v', 'V');
-        int suffixIndex = normalized.IndexOf('-');
-        if (suffixIndex >= 0)
-            normalized = normalized[..suffixIndex];
+        string normalized = value.Trim().TrimStart('v', 'V');
+        int suffix = normalized.IndexOf('-');
+        if (suffix >= 0)
+            normalized = normalized[..suffix];
 
         if (!Version.TryParse(normalized, out Version? parsed) || parsed == null)
             return false;
@@ -235,10 +241,7 @@ internal static class UpdateService
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30),
-        };
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("ytdown-updater/1.0");
         client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
         return client;
@@ -246,23 +249,23 @@ internal static class UpdateService
 
     private static bool CanWriteDirectory(string directory)
     {
-        string probePath = Path.Combine(directory, $".ytdown-write-test-{Guid.NewGuid():N}.tmp");
+        string probe = Path.Combine(directory, $".ytdown-write-test-{Guid.NewGuid():N}.tmp");
         try
         {
-            File.WriteAllText(probePath, string.Empty);
-            File.Delete(probePath);
+            File.WriteAllText(probe, string.Empty);
+            File.Delete(probe);
             return true;
         }
         catch
         {
-            try { File.Delete(probePath); } catch { }
+            try { File.Delete(probe); } catch { }
             return false;
         }
     }
 
-    private static string SanitizeForPath(string value)
+    private static string Sanitize(string value)
     {
-        var invalid = Path.GetInvalidFileNameChars();
+        char[] invalid = Path.GetInvalidFileNameChars();
         return new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
     }
 
@@ -280,6 +283,7 @@ internal static class UpdateService
 param(
     [Parameter(Mandatory = $true)][int]$ParentPid,
     [Parameter(Mandatory = $true)][string]$StagingDir,
+    [Parameter(Mandatory = $true)][string]$UpdateDir,
     [Parameter(Mandatory = $true)][string]$TargetDir
 )
 
@@ -299,23 +303,19 @@ try {
         throw 'Staged ytdown.exe was not found.'
     }
 
-    if (Test-Path -LiteralPath $backupDir) {
-        Remove-Item -LiteralPath $backupDir -Recurse -Force
-    }
-
-    # 기존 설치 폴더 자체를 백업 이름으로 이동한 뒤 새 폴더를 만듭니다.
-    # 이렇게 하면 이전 버전의 DLL/tools 파일이 새 설치 폴더에 남을 수 없습니다.
     Move-Item -LiteralPath $TargetDir -Destination $backupDir
     New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 
+    # 새 릴리스의 파일 목록만 새 설치 폴더에 복사합니다.
+    # 기존 폴더를 통째로 옮겼기 때문에 폐기된 DLL/tools 파일은 남지 않습니다.
     Get-ChildItem -LiteralPath $StagingDir -Force |
         Copy-Item -Destination $TargetDir -Recurse -Force
 
-    # 사용자 데이터만 명시적으로 보존합니다.
+    # 명시적으로 허용한 사용자 데이터만 이전 버전에서 복원합니다.
     foreach ($name in @('cookies.txt', 'settings.json')) {
-        $oldData = Join-Path $backupDir $name
-        if (Test-Path -LiteralPath $oldData) {
-            Copy-Item -LiteralPath $oldData -Destination (Join-Path $TargetDir $name) -Force
+        $source = Join-Path $backupDir $name
+        if (Test-Path -LiteralPath $source) {
+            Copy-Item -LiteralPath $source -Destination (Join-Path $TargetDir $name) -Force
         }
     }
 
@@ -331,9 +331,8 @@ try {
         throw "Updated application exited immediately. ExitCode=$($newProcess.ExitCode)"
     }
 
-    # 새 버전이 정상 기동된 뒤 백업과 staging을 삭제합니다.
     Remove-Item -LiteralPath $backupDir -Recurse -Force
-    Remove-Item -LiteralPath $StagingDir -Recurse -Force
+    Remove-Item -LiteralPath $UpdateDir -Recurse -Force
     "$(Get-Date -Format o) update succeeded" | Set-Content -LiteralPath $logPath -Encoding UTF8
 }
 catch {
@@ -345,7 +344,6 @@ catch {
         }
     } catch {}
 
-    # 실패 시 새 폴더를 제거하고 기존 버전을 원상복구합니다.
     try {
         if (Test-Path -LiteralPath $TargetDir) {
             Remove-Item -LiteralPath $TargetDir -Recurse -Force
