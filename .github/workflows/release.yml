@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'release/v*'
   workflow_dispatch:
     inputs:
       version:
@@ -33,6 +35,10 @@ jobs:
           if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
             $version = '${{ inputs.version }}'.Trim().TrimStart('v')
             $tag = "v$version"
+          }
+          elseif ('${{ github.ref_type }}' -eq 'branch' -and '${{ github.ref_name }}'.StartsWith('release/v')) {
+            $tag = '${{ github.ref_name }}'.Substring('release/'.Length)
+            $version = $tag.TrimStart('v')
           }
           else {
             $tag = '${{ github.ref_name }}'
